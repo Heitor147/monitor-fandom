@@ -8,9 +8,7 @@ quando algo novo acontece.
 
 import json
 import os
-import smtplib
 import sys
-from email.mime.text import MIMEText
 from pathlib import Path
 
 import requests
@@ -198,25 +196,27 @@ def format_event(ev):
 # ---------- envio ----------
 
 def send_email(subject, body):
-    host = os.environ.get("SMTP_HOST")
-    port = int(os.environ.get("SMTP_PORT", "587"))
-    user = os.environ.get("SMTP_USER")
-    password = os.environ.get("SMTP_PASSWORD")
+    api_key = os.environ.get("RESEND_API_KEY")
     to_addr = os.environ.get("NOTIFY_EMAIL")
 
-    if not all([host, user, password, to_addr]):
-        print("Email não configurado (faltando variáveis de ambiente), pulando.")
+    if not all([api_key, to_addr]):
+        print("Email não configurado (faltando RESEND_API_KEY ou NOTIFY_EMAIL), pulando.")
         return
 
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = user
-    msg["To"] = to_addr
-
-    with smtplib.SMTP(host, port) as server:
-        server.starttls()
-        server.login(user, password)
-        server.sendmail(user, [to_addr], msg.as_string())
+    r = requests.post(
+        "https://api.resend.com/emails",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={
+            # onboarding@resend.dev funciona sem precisar verificar domínio próprio
+            "from": "Fandom Watcher <onboarding@resend.dev>",
+            "to": [to_addr],
+            "subject": subject,
+            "text": body,
+        },
+        timeout=20,
+    )
+    if r.status_code >= 300:
+        print(f"Erro ao mandar email: {r.status_code} {r.text}")
 
 
 def send_whatsapp(text):

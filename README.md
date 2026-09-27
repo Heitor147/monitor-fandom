@@ -30,20 +30,26 @@ lugar de espaço) na lista `"pages"`.
 
 ### 3. WhatsApp grátis via CallMeBot
 
-1. Salva esse número nos seus contatos: **+34 644 51 95 23**
-2. Manda a mensagem `I allow callmebot to add me` pra esse número no
+1. Salva esse número nos seus contatos: **+34 644 95 42 75**
+2. Manda a mensagem `I allow callmebot to call me` pra esse número no
    WhatsApp
 3. Em alguns minutos ele te responde com uma **API Key**
 4. Guarda seu número (formato internacional, ex: `5511999999999`) e a
    API Key
 
-### 4. Email via Gmail
+> Esse número e essa mensagem mudam de vez em quando por parte da
+> CallMeBot. Se não rolar, confirma os valores atuais em
+> https://www.callmebot.com/blog/free-api-whatsapp-messages/
 
-1. Ative a verificação em duas etapas na sua conta Google (se ainda não
-   tiver)
-2. Cria uma **senha de app** em
-   https://myaccount.google.com/apppasswords
-3. Guarda essa senha (é diferente da sua senha normal do Gmail)
+### 4. Email via Resend
+
+1. Cria conta grátis em https://resend.com (não pede cartão, free tier
+   de 3000 emails/mês)
+2. Vai em **API Keys → Create API Key**, copia a chave gerada (começa
+   com `re_`)
+3. Não precisa configurar domínio nem nada — o remetente
+   `onboarding@resend.dev`, que já vem pronto na conta free, funciona
+   direto pra mandar email pra você mesmo
 
 ### 5. Secrets no GitHub
 
@@ -52,11 +58,8 @@ repository secret**. Cria estes:
 
 | Nome | Valor |
 |---|---|
-| `SMTP_HOST` | `smtp.gmail.com` |
-| `SMTP_PORT` | `587` |
-| `SMTP_USER` | seu email do Gmail |
-| `SMTP_PASSWORD` | a senha de app que você gerou |
-| `NOTIFY_EMAIL` | email que vai receber os avisos (pode ser o mesmo) |
+| `RESEND_API_KEY` | a chave que começa com `re_` |
+| `NOTIFY_EMAIL` | email que vai receber os avisos |
 | `CALLMEBOT_PHONE` | seu número, formato `5511999999999` |
 | `CALLMEBOT_APIKEY` | a API key que o CallMeBot te mandou |
 
