@@ -32,7 +32,7 @@ Formato recomendado, com várias wikis e as páginas de cada uma:
   "wikis": {
     "camp-halfblood-fanon": { "pages": ["Hera_(The_One_Who_Theorizes)"] },
     "hazbin-hotel-fanon": { "pages": [] },
-    "supernatural-fanon": { "pages": [], "wall": false }
+    "supernaturalfanon": { "pages": [], "wall": false }
   }
 }
 ```
