@@ -29,6 +29,7 @@ Formato recomendado, com várias wikis e as páginas de cada uma:
 ```json
 {
   "profile": { "username": "The_One_Who_Theorizes", "user_id": "45379286" },
+  "ignored_users": ["The One Who Theorizes"],
   "wikis": {
     "camp-halfblood-fanon": { "pages": ["Hera_(The_One_Who_Theorizes)"] },
     "hazbin-hotel-fanon": { "pages": [] },
@@ -39,6 +40,8 @@ Formato recomendado, com várias wikis e as páginas de cada uma:
 
 - `pages`: títulos com underscore no lugar de espaço.
 - `wall`: `true` por padrão. Coloca `false` numa wiki onde você não usa Message Wall.
+- `ignored_users`: usuários cujas edições, posts e respostas não geram alerta.
+  Espaços e underscores são tratados como equivalentes.
 - O formato antigo (`"wiki"` como texto ou lista + `"pages"` solto) ainda funciona.
   Nesse caso a lista de páginas vale pra todas as wikis, e onde a página não
   existe ela é ignorada.

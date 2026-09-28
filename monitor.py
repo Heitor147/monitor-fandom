@@ -39,6 +39,10 @@ def wikia_url(wiki):
     return f"https://{wiki}.fandom.com/wikia.php"
 
 
+def normalize_username(username):
+    return " ".join(str(username).replace("_", " ").split()).casefold()
+
+
 # ---------- config e estado por wiki ----------
 
 def normalize_config(config):
@@ -97,7 +101,7 @@ def get_latest_revisions(wiki, title, limit=5):
     return pageid, revisions
 
 
-def check_pages(wiki, titles, state, events):
+def check_pages(wiki, titles, state, events, ignored_users):
     state.setdefault("pages", {})
     for title in titles:
         pageid, revisions = get_latest_revisions(wiki, title)
@@ -114,6 +118,8 @@ def check_pages(wiki, titles, state, events):
 
         if last_known is not None:
             for rev in reversed(new_revisions):
+                if normalize_username(rev.get("user", "")) in ignored_users:
+                    continue
                 qtitle = quote(title, safe="/()_'")
                 page_link = f"https://{wiki}.fandom.com/wiki/{qtitle}"
                 revert_link = (
@@ -153,7 +159,7 @@ def get_wall_threads(wiki, wall_owner_id, limit=15):
     return data.get("_embedded", {}).get("threads", [])
 
 
-def check_wall(wiki, username, wall_owner_id, state, events):
+def check_wall(wiki, username, wall_owner_id, state, events, ignored_users):
     # Primeira vez nessa wiki: só grava o baseline, sem notificar threads que já existiam
     baseline = "wall_threads" not in state
     state.setdefault("wall_threads", {})
@@ -173,14 +179,15 @@ def check_wall(wiki, username, wall_owner_id, state, events):
         if baseline:
             pass
         elif known is None:
-            events.append({
-                "type": "wall_new",
-                "wiki": wiki,
-                "title": title,
-                "author": author,
-                "snippet": snippet,
-                "link": thread_link,
-            })
+            if normalize_username(author) not in ignored_users:
+                events.append({
+                    "type": "wall_new",
+                    "wiki": wiki,
+                    "title": title,
+                    "author": author,
+                    "snippet": snippet,
+                    "link": thread_link,
+                })
         else:
             if post_count > known.get("post_count", 0):
                 events.append({
@@ -312,18 +319,28 @@ def main():
     events = []
 
     profile = config.get("profile")
+    ignored_users = {
+        normalize_username(user) for user in config.get("ignored_users", [])
+    }
 
     # Cada wiki (e cada parte dela) é isolada: uma wiki fora do ar vira aviso, não derruba as outras
     for wiki, opts in wikis.items():
         wstate = state["wikis"].setdefault(wiki, {})
         try:
-            check_pages(wiki, opts["pages"], wstate, events)
+            check_pages(wiki, opts["pages"], wstate, events, ignored_users)
         except Exception as e:
             print(f"::warning::[{wiki}] Falha ao checar páginas: {type(e).__name__}: {e}")
 
         if profile and opts["wall"]:
             try:
-                check_wall(wiki, profile["username"], profile["user_id"], wstate, events)
+                check_wall(
+                    wiki,
+                    profile["username"],
+                    profile["user_id"],
+                    wstate,
+                    events,
+                    ignored_users,
+                )
             except Exception as e:
                 print(f"::warning::[{wiki}] Falha ao checar o mural: {type(e).__name__}: {e}")
 
