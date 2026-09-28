@@ -13,6 +13,8 @@ from pathlib import Path
 
 import requests
 
+HEADERS = {"User-Agent": "fandom-watcher/1.0 (monitor pessoal de wiki)"}
+
 CONFIG_PATH = Path(__file__).parent / "config.json"
 STATE_PATH = Path(__file__).parent / "state.json"
 
@@ -47,7 +49,7 @@ def get_latest_revisions(wiki, title, limit=5):
         "rvprop": "timestamp|user|comment|ids",
         "format": "json",
     }
-    r = requests.get(api_url(wiki), params=params, timeout=20)
+    r = requests.get(api_url(wiki), params=params, headers=HEADERS, timeout=20)
     r.raise_for_status()
     data = r.json()
     pages = data.get("query", {}).get("pages", {})
@@ -107,7 +109,7 @@ def get_wall_threads(wiki, wall_owner_id, limit=15):
         "limit": limit,
         "wallOwnerId": wall_owner_id,
     }
-    r = requests.get(wikia_url(wiki), params=params, timeout=20)
+    r = requests.get(wikia_url(wiki), params=params, headers=HEADERS, timeout=20)
     r.raise_for_status()
     data = r.json()
     return data.get("_embedded", {}).get("threads", [])
@@ -196,41 +198,60 @@ def format_event(ev):
 # ---------- envio ----------
 
 def send_email(subject, body):
+    """Retorna True se enviou, False se falhou, None se não está configurado."""
     api_key = os.environ.get("RESEND_API_KEY")
     to_addr = os.environ.get("NOTIFY_EMAIL")
 
     if not all([api_key, to_addr]):
         print("Email não configurado (faltando RESEND_API_KEY ou NOTIFY_EMAIL), pulando.")
-        return
+        return None
 
-    r = requests.post(
-        "https://api.resend.com/emails",
-        headers={"Authorization": f"Bearer {api_key}"},
-        json={
-            # onboarding@resend.dev funciona sem precisar verificar domínio próprio
-            "from": "Fandom Watcher <onboarding@resend.dev>",
-            "to": [to_addr],
-            "subject": subject,
-            "text": body,
-        },
-        timeout=20,
-    )
+    try:
+        r = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                # onboarding@resend.dev funciona sem precisar verificar domínio próprio
+                "from": "Fandom Watcher <onboarding@resend.dev>",
+                "to": [to_addr],
+                "subject": subject,
+                "text": body,
+            },
+            timeout=20,
+        )
+    except requests.RequestException as e:
+        print(f"::error::Falha de rede ao mandar email: {e}")
+        return False
+
     if r.status_code >= 300:
-        print(f"Erro ao mandar email: {r.status_code} {r.text}")
+        print(f"::error::Erro ao mandar email: {r.status_code} {r.text}")
+        return False
+    return True
 
 
 def send_whatsapp(text):
+    """Retorna True se enviou, False se falhou, None se não está configurado."""
     phone = os.environ.get("CALLMEBOT_PHONE")
     apikey = os.environ.get("CALLMEBOT_APIKEY")
 
     if not all([phone, apikey]):
         print("WhatsApp (CallMeBot) não configurado, pulando.")
-        return
+        return None
 
-    params = {"phone": phone, "text": text, "apikey": apikey}
-    r = requests.get("https://api.callmebot.com/whatsapp.php", params=params, timeout=20)
+    try:
+        r = requests.get(
+            "https://api.callmebot.com/whatsapp.php",
+            params={"phone": phone, "text": text, "apikey": apikey},
+            timeout=20,
+        )
+    except requests.RequestException as e:
+        print(f"::error::Falha de rede ao mandar WhatsApp: {e}")
+        return False
+
     if r.status_code != 200:
-        print(f"Erro ao mandar WhatsApp: {r.status_code} {r.text}")
+        print(f"::error::Erro ao mandar WhatsApp: {r.status_code} {r.text[:200]}")
+        return False
+    return True
 
 
 # ---------- main ----------
@@ -238,33 +259,48 @@ def send_whatsapp(text):
 def main():
     config = load_json(CONFIG_PATH, None)
     if config is None:
-        print("config.json não encontrado.")
+        print("::error::config.json não encontrado.")
         sys.exit(1)
 
     state = load_json(STATE_PATH, {})
     events = []
 
     wiki = config["wiki"]
-    check_pages(wiki, config.get("pages", []), state, events)
+
+    # Falha de rede na Fandom não derruba o run: vira aviso e tenta de novo no próximo ciclo
+    try:
+        check_pages(wiki, config.get("pages", []), state, events)
+    except Exception as e:
+        print(f"::warning::Falha ao checar páginas: {type(e).__name__}: {e}")
 
     profile = config.get("profile")
     if profile:
-        check_wall(wiki, profile["username"], profile["user_id"], state, events)
-
-    save_json(STATE_PATH, state)
+        try:
+            check_wall(wiki, profile["username"], profile["user_id"], state, events)
+        except Exception as e:
+            print(f"::warning::Falha ao checar o mural: {type(e).__name__}: {e}")
 
     if not events:
+        save_json(STATE_PATH, state)
         print("Nada novo.")
         return
 
     print(f"{len(events)} evento(s) novo(s).")
 
+    results = []
     body = "\n\n".join(format_event(ev) for ev in events)
-    send_email(f"Fandom Watcher: {len(events)} novidade(s)", body)
+    results.append(send_email(f"Fandom Watcher: {len(events)} novidade(s)", body))
 
-    # WhatsApp: manda um resumo curto por evento (CallMeBot tem limite de tamanho)
+    # WhatsApp: um resumo curto por evento (CallMeBot tem limite de tamanho)
     for ev in events:
-        send_whatsapp(format_event(ev)[:600])
+        results.append(send_whatsapp(format_event(ev)[:600]))
+
+    if any(r is True for r in results):
+        save_json(STATE_PATH, state)
+    else:
+        # Nenhum canal entregou: não salva o estado, assim o evento é detectado de novo no próximo ciclo
+        print("::error::Nenhuma notificação foi entregue. Estado NÃO salvo, vai tentar de novo.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
