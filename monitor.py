@@ -10,6 +10,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 import requests
 
@@ -36,6 +37,41 @@ def api_url(wiki):
 
 def wikia_url(wiki):
     return f"https://{wiki}.fandom.com/wikia.php"
+
+
+# ---------- config e estado por wiki ----------
+
+def normalize_config(config):
+    """Devolve {wiki: {"pages": [...], "wall": bool}}.
+
+    Aceita 3 formatos:
+    - novo:    {"wikis": {"nome-da-wiki": {"pages": [...], "wall": true}}}
+    - antigo:  {"wiki": "nome", "pages": [...]}
+    - lista:   {"wiki": ["a", "b"], "pages": [...]}  (as páginas valem pra todas;
+               numa wiki onde a página não existe, ela é simplesmente ignorada)
+    """
+    has_profile = bool(config.get("profile"))
+    if "wikis" in config:
+        return {
+            name: {"pages": opts.get("pages", []), "wall": opts.get("wall", has_profile)}
+            for name, opts in config["wikis"].items()
+        }
+    wikis = config.get("wiki", [])
+    if isinstance(wikis, str):
+        wikis = [wikis]
+    pages = config.get("pages", [])
+    return {name: {"pages": pages, "wall": has_profile} for name in wikis}
+
+
+def migrate_state(state, wikis):
+    """Estado antigo (sem separação por wiki) pertencia à camp-halfblood-fanon."""
+    if "wikis" in state:
+        return state
+    new = {"wikis": {}}
+    legacy = {k: state[k] for k in ("pages", "wall_threads") if k in state}
+    if legacy and "camp-halfblood-fanon" in wikis:
+        new["wikis"]["camp-halfblood-fanon"] = legacy
+    return new
 
 
 # ---------- checagem de edições ----------
@@ -78,13 +114,15 @@ def check_pages(wiki, titles, state, events):
 
         if last_known is not None:
             for rev in reversed(new_revisions):
-                page_link = f"https://{wiki}.fandom.com/wiki/{title}"
+                qtitle = quote(title, safe="/()_'")
+                page_link = f"https://{wiki}.fandom.com/wiki/{qtitle}"
                 revert_link = (
-                    f"https://{wiki}.fandom.com/index.php?title={title}"
-                    f"&action=edit&undoafter={rev['parentid']}&undo={rev['revid']}"
+                    f"https://{wiki}.fandom.com/index.php?title={qtitle}"
+                    f"&action=edit&undoafter={rev.get('parentid', 0)}&undo={rev['revid']}"
                 )
                 events.append({
                     "type": "edit",
+                    "wiki": wiki,
                     "page": title.replace("_", " "),
                     "user": rev.get("user", "desconhecido"),
                     "comment": rev.get("comment") or "(sem resumo)",
@@ -116,13 +154,15 @@ def get_wall_threads(wiki, wall_owner_id, limit=15):
 
 
 def check_wall(wiki, username, wall_owner_id, state, events):
+    # Primeira vez nessa wiki: só grava o baseline, sem notificar threads que já existiam
+    baseline = "wall_threads" not in state
     state.setdefault("wall_threads", {})
     threads = get_wall_threads(wiki, wall_owner_id)
 
     for thread in threads:
         tid = thread["id"]
         known = state["wall_threads"].get(tid)
-        thread_link = f"https://{wiki}.fandom.com/wiki/Message_Wall:{username}?threadId={tid}"
+        thread_link = f"https://{wiki}.fandom.com/wiki/Message_Wall:{quote(username)}?threadId={tid}"
 
         post_count = thread.get("postCount", 0)
         upvotes = thread.get("upvoteCount", 0)
@@ -130,9 +170,12 @@ def check_wall(wiki, username, wall_owner_id, state, events):
         title = thread.get("title") or "(sem título)"
         snippet = (thread.get("rawContent") or "")[:200]
 
-        if known is None:
+        if baseline:
+            pass
+        elif known is None:
             events.append({
                 "type": "wall_new",
+                "wiki": wiki,
                 "title": title,
                 "author": author,
                 "snippet": snippet,
@@ -142,6 +185,7 @@ def check_wall(wiki, username, wall_owner_id, state, events):
             if post_count > known.get("post_count", 0):
                 events.append({
                     "type": "wall_reply",
+                    "wiki": wiki,
                     "title": title,
                     "author": author,
                     "snippet": snippet,
@@ -150,6 +194,7 @@ def check_wall(wiki, username, wall_owner_id, state, events):
             if upvotes > known.get("upvote_count", 0):
                 events.append({
                     "type": "wall_like",
+                    "wiki": wiki,
                     "title": title,
                     "count": upvotes,
                     "link": thread_link,
@@ -166,7 +211,7 @@ def check_wall(wiki, username, wall_owner_id, state, events):
 def format_event(ev):
     if ev["type"] == "edit":
         return (
-            f"✏️ Edição em \"{ev['page']}\"\n"
+            f"✏️ [{ev['wiki']}] Edição em \"{ev['page']}\"\n"
             f"Por: {ev['user']}\n"
             f"Resumo: {ev['comment']}\n"
             f"Quando: {ev['timestamp']}\n"
@@ -175,21 +220,21 @@ def format_event(ev):
         )
     if ev["type"] == "wall_new":
         return (
-            f"💬 Novo post no mural: \"{ev['title']}\"\n"
+            f"💬 [{ev['wiki']}] Novo post no mural: \"{ev['title']}\"\n"
             f"De: {ev['author']}\n"
             f"Trecho: {ev['snippet']}\n"
             f"Ver: {ev['link']}"
         )
     if ev["type"] == "wall_reply":
         return (
-            f"↩️ Nova resposta em \"{ev['title']}\"\n"
+            f"↩️ [{ev['wiki']}] Nova resposta em \"{ev['title']}\"\n"
             f"De: {ev['author']}\n"
             f"Trecho: {ev['snippet']}\n"
             f"Ver: {ev['link']}"
         )
     if ev["type"] == "wall_like":
         return (
-            f"👍 Curtida em \"{ev['title']}\" (total: {ev['count']})\n"
+            f"👍 [{ev['wiki']}] Curtida em \"{ev['title']}\" (total: {ev['count']})\n"
             f"Ver: {ev['link']}"
         )
     return str(ev)
@@ -262,23 +307,25 @@ def main():
         print("::error::config.json não encontrado.")
         sys.exit(1)
 
-    state = load_json(STATE_PATH, {})
+    wikis = normalize_config(config)
+    state = migrate_state(load_json(STATE_PATH, {}), wikis)
     events = []
 
-    wiki = config["wiki"]
-
-    # Falha de rede na Fandom não derruba o run: vira aviso e tenta de novo no próximo ciclo
-    try:
-        check_pages(wiki, config.get("pages", []), state, events)
-    except Exception as e:
-        print(f"::warning::Falha ao checar páginas: {type(e).__name__}: {e}")
-
     profile = config.get("profile")
-    if profile:
+
+    # Cada wiki (e cada parte dela) é isolada: uma wiki fora do ar vira aviso, não derruba as outras
+    for wiki, opts in wikis.items():
+        wstate = state["wikis"].setdefault(wiki, {})
         try:
-            check_wall(wiki, profile["username"], profile["user_id"], state, events)
+            check_pages(wiki, opts["pages"], wstate, events)
         except Exception as e:
-            print(f"::warning::Falha ao checar o mural: {type(e).__name__}: {e}")
+            print(f"::warning::[{wiki}] Falha ao checar páginas: {type(e).__name__}: {e}")
+
+        if profile and opts["wall"]:
+            try:
+                check_wall(wiki, profile["username"], profile["user_id"], wstate, events)
+            except Exception as e:
+                print(f"::warning::[{wiki}] Falha ao checar o mural: {type(e).__name__}: {e}")
 
     if not events:
         save_json(STATE_PATH, state)

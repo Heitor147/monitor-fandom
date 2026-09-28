@@ -24,9 +24,24 @@ arquivos.
 
 ### 2. Configurar `config.json`
 
-Já vem preenchido com a wiki e página de teste que usamos. Quando quiser
-adicionar mais páginas, é só colocar o título delas (com underscore no
-lugar de espaço) na lista `"pages"`.
+Formato recomendado, com várias wikis e as páginas de cada uma:
+
+```json
+{
+  "profile": { "username": "The_One_Who_Theorizes", "user_id": "45379286" },
+  "wikis": {
+    "camp-halfblood-fanon": { "pages": ["Hera_(The_One_Who_Theorizes)"] },
+    "hazbin-hotel-fanon": { "pages": [] },
+    "supernatural-fanon": { "pages": [], "wall": false }
+  }
+}
+```
+
+- `pages`: títulos com underscore no lugar de espaço.
+- `wall`: `true` por padrão. Coloca `false` numa wiki onde você não usa Message Wall.
+- O formato antigo (`"wiki"` como texto ou lista + `"pages"` solto) ainda funciona.
+  Nesse caso a lista de páginas vale pra todas as wikis, e onde a página não
+  existe ela é ignorada.
 
 ### 3. WhatsApp grátis via CallMeBot
 
