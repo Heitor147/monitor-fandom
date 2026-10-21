@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import requests
+import ai_summary
 
 HEADERS = {"User-Agent": "fandom-watcher/1.0 (monitor pessoal de wiki)"}
 
@@ -222,7 +223,8 @@ def format_event(ev):
             f"Por: {ev['user']}\n"
             f"Resumo: {ev['comment']}\n"
             f"Quando: {ev['timestamp']}\n"
-            f"Aceitar (ver página): {ev['accept_link']}\n"
+            + (f"IA: {ev['ai']}\n" if ev.get("ai") else "")
+            + f"Aceitar (ver página): {ev['accept_link']}\n"
             f"Reverter (abre editor): {ev['revert_link']}"
         )
     if ev["type"] == "wall_new":
@@ -350,6 +352,7 @@ def main():
         return
 
     print(f"{len(events)} evento(s) novo(s).")
+    ai_summary.enrich(events)
 
     results = []
     body = "\n\n".join(format_event(ev) for ev in events)
