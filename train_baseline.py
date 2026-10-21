@@ -15,8 +15,10 @@ from sklearn.preprocessing import StandardScaler
 
 IP_RE = re.compile(r"^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-fA-F:]+:[0-9a-fA-F:]+$")
 
+
 def slog(x):
     return np.sign(x) * np.log1p(np.abs(x))
+
 
 def load(pattern):
     rows = []
@@ -28,6 +30,7 @@ def load(pattern):
     df["reverted"] = df["reverted"].astype(int)
     df["ts"] = pd.to_datetime(df["timestamp"], utc=True)
     return df.sort_values("ts").reset_index(drop=True)
+
 
 def build_features(df):
     f = pd.DataFrame(index=df.index)
@@ -48,22 +51,29 @@ def build_features(df):
     f["user_prior"] = slog(g_user.cumcount())
     f["user_age_days"] = slog((df["ts"] - g_user["ts"].transform("min")).dt.days)
     f["page_prior"] = slog(df.groupby(["wiki", "pageid"]).cumcount())
-    tags = df["tags"].map(lambda t: t if isinstance(t, list) else [])
+    # CUIDADO: "mw-reverted" é colocada na edição DEPOIS que ela é revertida, e o
+    # collect_data usa essa tag pra criar o rótulo. Como característica, é vazamento.
+    LEAKY_TAGS = {"mw-reverted"}
+    tags = df["tags"].map(lambda t: [x for x in t if x not in LEAKY_TAGS] if isinstance(t, list) else [])
     f["n_tags"] = tags.map(len)
     common = [t for t, c in Counter(t for ts_ in tags for t in ts_).items() if c >= 100]
+    print("tags usadas como característica:", sorted(common) or "nenhuma")
     for t in common:
         f["tag_" + t] = tags.map(lambda ts_, t=t: int(t in ts_))
     f = f.join(pd.get_dummies(df["wiki"], prefix="wiki").astype(int))
     return f, comment
+
 
 def topk_recall(y, score, frac):
     k = max(1, int(len(y) * frac))
     idx = np.argsort(-score)[:k]
     return y[idx].sum() / max(1, y.sum())
 
+
 def report(name, y, score):
     print(f"{name:28s} PR-AUC={average_precision_score(y, score):.3f}  "
           f"recall@top5%={topk_recall(y, score, 0.05):.2f}  recall@top10%={topk_recall(y, score, 0.10):.2f}")
+
 
 def main():
     ap = argparse.ArgumentParser()
