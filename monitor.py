@@ -221,7 +221,7 @@ def format_event(ev):
         return (
             f"✏️ [{ev['wiki']}] Edição em \"{ev['page']}\"\n"
             f"Por: {ev['user']}\n"
-            f"Resumo: {ev['comment']}\n"
+            f"Resumo: {ev.get('ai') or ev['comment']}\n"
             f"Quando: {ev['timestamp']}\n"
             + (f"IA: {ev['ai']}\n" if ev.get("ai") else "")
             + f"Aceitar (ver página): {ev['accept_link']}\n"

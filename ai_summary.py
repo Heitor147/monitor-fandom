@@ -13,6 +13,7 @@ GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:ge
 MAX_EVENTS_PER_RUN = 8      # teto de chamadas por execução
 SECONDS_BETWEEN_CALLS = 7   # ~8 por minuto, abaixo do limite gratuito
 MAX_DIFF_CHARS = 6000
+MAX_SUMMARY_CHARS = 150    # o WhatsApp corta em 600 caracteres; resumo maior comeria o link de reverter
 VERDICTS = ("legítima", "suspeita", "vandalismo")
 ICONS = {"legítima": "✅", "suspeita": "⚠️", "vandalismo": "🚨"}
 
