@@ -11,14 +11,18 @@ LOOKAHEAD = 5
 SLEEP = 0.6  # educação com a API da Fandom
 
 
-def fetch_all_revisions(wiki, max_revisions):
-    """Baixa revisões via list=allrevisions, com paginação."""
+def fetch_all_revisions(wiki, max_revisions, direction="older"):
+    """Baixa revisões via list=allrevisions, com paginação.
+
+    direction="older" pega as MAIS RECENTES primeiro (melhor pro Ra, que vai julgar
+    edições novas). "newer" pega as mais antigas primeiro.
+    """
     url = f"https://{wiki}.fandom.com/api.php"
     params = {
         "action": "query",
         "list": "allrevisions",
         "arvlimit": 500,
-        "arvdir": "newer",
+        "arvdir": direction,
         "arvprop": "ids|timestamp|user|userid|comment|size|sha1|tags",
         "arvnamespace": 0,
         "format": "json",
@@ -77,6 +81,8 @@ def main():
     ap.add_argument("--config", default="config.json")
     ap.add_argument("--wiki", help="só esta wiki (senão todas do config)")
     ap.add_argument("--max", type=int, default=20000, help="máx. de revisões por wiki")
+    ap.add_argument("--direction", choices=["older", "newer"], default="older",
+                    help="older = mais recentes primeiro (padrão); newer = mais antigas primeiro")
     args = ap.parse_args()
 
     config = json.load(open(args.config, encoding="utf-8"))
@@ -86,7 +92,7 @@ def main():
     for wiki in wikis:
         print(f"[{wiki}] baixando revisões...")
         try:
-            revs = fetch_all_revisions(wiki, args.max)
+            revs = fetch_all_revisions(wiki, args.max, args.direction)
         except Exception as e:
             print(f"[{wiki}] falhou: {type(e).__name__}: {e}")
             continue
