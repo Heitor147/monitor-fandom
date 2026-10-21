@@ -7,7 +7,7 @@ import time
 import requests
 
 # Configurável por variável de ambiente, porque nome de modelo e limite do plano gratuito mudam
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 MAX_EVENTS_PER_RUN = 8      # teto de chamadas por execução
@@ -92,7 +92,7 @@ def ask_gemini(api_key, page, user, comment, diff_text):
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.2,
-            "maxOutputTokens": 300,
+            "maxOutputTokens": 1024,
             "responseMimeType": "application/json",
             "responseSchema": RESPONSE_SCHEMA,
         },
