@@ -260,7 +260,7 @@ def verify(result, refs):
         page, quote = norm(d.get("pagina", "")), d.get("trecho", "")
         if page in blob and quote_in(quote, blob[page]):
             div.append({
-                "alegacao": _cut(d.get("alegacao", ""), 160),
+                "alegacao": _cut(d.get("alegacao", ""), 300),
                 "conflito": _cut(d.get("conflito", ""), 200),
                 "pagina": _cut(d.get("pagina", ""), 80),
                 "trecho": _cut(quote, 220),
