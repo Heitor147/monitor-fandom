@@ -275,7 +275,7 @@ def send_email(subject, body):
             headers={"Authorization": f"Bearer {api_key}"},
             json={
                 # onboarding@resend.dev funciona sem precisar verificar domínio próprio
-                "from": "Fandom Watcher <onboarding@resend.dev>",
+                "from": "Ra <onboarding@resend.dev>",
                 "to": [to_addr],
                 "subject": subject,
                 "text": body,
