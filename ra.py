@@ -29,7 +29,7 @@ CHUNK_CHARS = 700
 MAX_QUERY_CHARS = 5000
 MAX_EVENTS_PER_RUN = 4    # teto de chamadas do Ra por execução
 MIN_QUOTE_CHARS = 12
-WA_MAX = 110              # linha do Ra no WhatsApp (o limite é 600 pro aviso inteiro)
+WA_MAX = 80              # linha do Ra no WhatsApp (o limite é 600 pro aviso inteiro)
 
 STOP = set(
     "a o os as um uma uns umas de do da dos das em no na nos nas por para com sem sob sobre "
