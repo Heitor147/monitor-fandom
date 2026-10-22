@@ -125,7 +125,7 @@ def clean_output(data):
 # ---------- ponto de entrada ----------
 
 def enrich(events):
-    """Adiciona ev['ai'] nos eventos de edição. Nunca levanta exceção."""
+    """Plano B: resumo simples nos eventos que o Ra não julgou. Nunca levanta exceção."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         print("IA não configurada (sem GEMINI_API_KEY), pulando resumos.")
@@ -135,6 +135,8 @@ def enrich(events):
     for ev in events:
         if ev.get("type") != "edit":
             continue
+        if ev.get("ai"):
+            continue  # o Ra já deu o veredito; isto aqui é só o plano B (desfazer/reverter, falha do Ra)
         if done >= MAX_EVENTS_PER_RUN:
             break
         parent_id, rev_id = parse_revids(ev.get("revert_link"))

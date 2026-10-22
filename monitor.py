@@ -226,7 +226,7 @@ def format_event(ev, full=True):
             f"Por: {ev['user']}\n"
             f"Resumo: {ev['comment']}\n"
             f"Quando: {ev['timestamp']}\n"
-            + (f"IA: {ev['ai']}\n" if ev.get("ai") else "")
+            + (f"🔆 Ra: {ev['ai']}\n" if ev.get("ai") else "")
             + (f"{canon}\n" if canon else "")
         )
         links = (
@@ -361,11 +361,11 @@ def main():
         return
 
     print(f"{len(events)} evento(s) novo(s).")
-    ai_summary.enrich(events)
     try:
-        ra.enrich(events, wikis)
+        ra.enrich(events, wikis)  # juiz único: veredito + resumo + cânon numa chamada
     except Exception as e:  # o Ra nunca derruba o bot
         print(f"::warning::Ra falhou: {type(e).__name__}: {e}")
+    ai_summary.enrich(events)  # plano B: só preenche o que o Ra não julgou (ex.: desfazer/reverter)
 
     results = []
     body = "\n\n".join(format_event(ev) for ev in events)

@@ -56,8 +56,8 @@ def main():
     print(f"Edição escolhida: {ev['user']} em {ev['timestamp']} (rev {rev['revid']})\n")
 
     ra.enrich([ev], wikis)
-    if "canon" not in ev:
-        print("O Ra não devolveu nada (sem diff, sem referência relacionada, ou erro acima).")
+    if "ai" not in ev:
+        print("O Ra não devolveu nada (sem diff ou erro acima).")
         return
     print("=== EMAIL ===")
     print(monitor.format_event(ev, full=True))
