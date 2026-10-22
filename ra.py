@@ -2,7 +2,7 @@
 
 Quando alguém edita uma página sua, o Ra lê o diff, confere o que mudou contra o resto do
 seu lore (as páginas que você mantém na mesma wiki) e devolve UM veredito (legítima,
-suspeita ou vandalismo) com resumo, mais as anotações de cânon.
+suspeita, vandalismo ou inconclusiva) com resumo, mais as anotações de cânon.
 
 Princípios (herdados da skill canon-consistency-check):
 - O que VOCÊ escreveu é a referência; a edição é que precisa bater, não o contrário.
@@ -56,7 +56,11 @@ SYSTEM_PROMPT = (
     "'suspeita' (apaga muito conteúdo, mexe em categorias, contradiz o cânon, altera fatos sem "
     "contexto, texto estranho) ou 'vandalismo' (esvaziar página, spam, ofensas, piadas ou opinião "
     "solta, texto sem sentido, links promocionais). Na dúvida entre legítima e suspeita, escolha "
-    "suspeita. Divergência real com o cânon nunca é 'legítima'. "
+    "suspeita. 'inconclusiva' (o diff ou o contexto veio incompleto, ilegível, contraditório ou insuficiente "
+    "para entender com segurança o que foi feito). Use 'inconclusiva' somente nessa remota situação, "
+    "não apenas porque a edição é nova ou porque não há referência relacionada. Em 'resumo', explique "
+    "brevemente o motivo da incerteza; o sistema acrescentará um convite para o usuário investigar "
+    "manualmente. Divergência real com o cânon nunca é 'legítima'. "
     "Regras do cânon: "
     "1) O que o escritor já estabeleceu nos trechos é a referência; é a edição que precisa bater com "
     "ela, não o contrário. "
@@ -73,7 +77,8 @@ SYSTEM_PROMPT = (
     "Conteúdo novo sem nada relacionado nos trechos NÃO é problema: ignore, não liste. "
     "5) 'consistentes': só alegações ADICIONADAS ou ALTERADAS pela edição que batem com o material, "
     "com a página. Não liste fatos que a edição não tocou. "
-    "6) Se o veredito for 'vandalismo' ou se a referência vier vazia, deixe as três listas vazias. "
+    "6) Se o veredito for 'vandalismo' ou 'inconclusiva', ou se a referência vier vazia, deixe as "
+    "três listas vazias. "
     "Não reescreva a edição. "
     "7) No máximo 3 itens por lista, curtos. "
     "Listas vazias são uma resposta válida e esperada quando não há nada a apontar."
@@ -299,7 +304,7 @@ def judge(result, refs):
 
     Regras aplicadas no código, não só no prompt:
     - divergência confirmada (citação literal) impede 'legítima';
-    - vandalismo não leva relatório de cânon;
+    - vandalismo e inconclusiva não levam relatório de cânon;
     - sem referência, não há relatório de cânon.
     """
     canon = verify(result, refs)
@@ -309,7 +314,7 @@ def judge(result, refs):
     if canon["divergentes"] and verdict == "legítima":
         verdict = "suspeita"
     line = ai_summary.clean_output({"resumo": result.get("resumo", ""), "veredito": verdict})
-    if verdict == "vandalismo" or not refs:
+    if verdict in ("vandalismo", "inconclusiva") or not refs:
         canon = None
     return line, canon
 

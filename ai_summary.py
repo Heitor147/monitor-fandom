@@ -14,8 +14,8 @@ MAX_EVENTS_PER_RUN = 8      # teto de chamadas por execução
 SECONDS_BETWEEN_CALLS = 7   # ~8 por minuto, abaixo do limite gratuito
 MAX_DIFF_CHARS = 6000
 MAX_SUMMARY_CHARS = 150    # o WhatsApp corta em 600 caracteres; resumo maior comeria o link de reverter
-VERDICTS = ("legítima", "suspeita", "vandalismo")
-ICONS = {"legítima": "✅", "suspeita": "⚠️", "vandalismo": "🚨"}
+VERDICTS = ("legítima", "suspeita", "vandalismo", "inconclusiva")
+ICONS = {"legítima": "✅", "suspeita": "⚠️", "vandalismo": "🚨", "inconclusiva": "❔"}
 
 HEADERS = {"User-Agent": "fandom-watcher/1.0 (monitor pessoal de wiki)"}
 
@@ -29,7 +29,9 @@ SYSTEM_PROMPT = (
     "já teve problema com isso. "
     "'veredito': 'legítima' (edição normal, correção, formatação, conteúdo coerente), "
     "'suspeita' (apaga muito conteúdo, mexe em categorias, altera fatos sem contexto, texto estranho) ou "
-    "'vandalismo' (esvaziar página, spam, ofensas, texto sem sentido, links promocionais). "
+    "'vandalismo' (esvaziar página, spam, ofensas, texto sem sentido, links promocionais) ou "
+    "'inconclusiva' (o diff está incompleto, ilegível ou não oferece informação suficiente para "
+    "entender a mudança). "
     "Na dúvida entre legítima e suspeita, escolha suspeita."
 )
 
@@ -116,7 +118,12 @@ def clean_output(data):
     if verdict not in VERDICTS:
         return None
     resumo = re.sub(r"https?://\S+", "[link removido]", str(data.get("resumo", "")))
-    resumo = " ".join(resumo.split())[:300]
+    resumo = " ".join(resumo.split())
+    if verdict == "inconclusiva":
+        if not resumo:
+            resumo = "não foi possível interpretar a edição com segurança."
+        resumo += " Confira a edição manualmente antes de decidir."
+    resumo = resumo[:300]
     if not resumo:
         return None
     return f"{ICONS[verdict]} {verdict.capitalize()}: {resumo}"

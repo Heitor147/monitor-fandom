@@ -98,6 +98,22 @@ class RaTests(unittest.TestCase):
         line, _ = ra.judge(gem("talvez"), refs_all())
         self.assertTrue(line.startswith("⚠️ Suspeita"))
 
+    def test_inconclusiva_explicita_motivo_e_pede_investigacao(self):
+        line, canon = ra.judge(
+            gem("inconclusiva", resumo="O diff veio truncado e não dá para entender a alteração."),
+            refs_all(),
+        )
+        self.assertTrue(line.startswith("❔ Inconclusiva"))
+        self.assertIn("diff veio truncado", line)
+        self.assertIn("Confira a edição manualmente", line)
+        self.assertIsNone(canon)
+
+    def test_inconclusiva_sem_motivo_tem_fallback_e_nao_tem_canon(self):
+        line, canon = ra.judge(gem("inconclusiva", resumo=""), refs_all())
+        self.assertIn("não foi possível interpretar", line)
+        self.assertIn("Confira a edição manualmente", line)
+        self.assertIsNone(canon)
+
     # ---- enrich
     def _run(self, events, ask):
         with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "x"}), \

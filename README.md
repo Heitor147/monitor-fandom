@@ -28,7 +28,15 @@ Para cada edição relevante, o Ra:
      possível contradição;
    - `vandalismo`: esvaziamento, spam, ofensa, texto sem sentido ou link
      promocional;
+   - `inconclusiva`: situação excepcional em que o diff ou o contexto veio
+     incompleto, ilegível ou insuficiente para entender a edição com segurança.
 5. acrescenta um resumo curto e, quando aplicável, um relatório de cânon.
+
+Quando o veredito é `inconclusiva`, o resumo informa brevemente o motivo da
+incerteza, dentro do limite da notificação, e orienta o usuário a investigar a
+edição manualmente antes de decidir. Isso é diferente de `suspeita`: não
+significa que a edição parece ruim, apenas que o Ra não conseguiu entendê-la
+com segurança.
 
 O relatório separa divergências confirmadas, pontos ambíguos e alegações
 consistentes. Uma divergência só é aceita quando a página e a citação literal
