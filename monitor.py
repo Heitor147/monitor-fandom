@@ -25,12 +25,12 @@ STATE_PATH = Path(__file__).parent / "state.json"
 
 def load_json(path, default):
     if path.exists():
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding="utf-8"))
     return default
 
 
 def save_json(path, data):
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def api_url(wiki):
