@@ -30,6 +30,7 @@ MAX_QUERY_CHARS = 5000
 MAX_EVENTS_PER_RUN = 4    # teto de chamadas do Ra por execução
 MIN_QUOTE_CHARS = 12
 WA_MAX = 80              # linha do Ra no WhatsApp (o limite é 600 pro aviso inteiro)
+REVERT_RE = re.compile(r"^(undo revision|revert|rollback)", re.I)
 
 STOP = set(
     "a o os as um uma uns umas de do da dos das em no na nos nas por para com sem sob sobre "
@@ -57,7 +58,7 @@ SYSTEM_PROMPT = (
     "páginas, reporte. "
     "4) 'ambiguos': quando o material de referência se contradiz ou não permite concluir. "
     "Conteúdo novo sem nada relacionado nos trechos NÃO é problema: ignore, não liste. "
-    "5) 'consistentes': até 3 alegações da edição que batem com o material, com a página. "
+    "5) ‘consistentes’: só alegações ADICIONADAS ou ALTERADAS pela edição que batem com o material. Não liste fatos que a edição não tocou. "
     "6) Não avalie qualidade de escrita nem vandalismo, só consistência. Não reescreva a edição. "
     "7) No máximo 3 itens por lista, curtos, em português do Brasil, diretos. "
     "Listas vazias são uma resposta válida e esperada quando não há nada a apontar."
@@ -355,6 +356,8 @@ def enrich(events, wikis):
             continue
         if str(ev.get("ai", "")).startswith(ai_summary.ICONS["vandalismo"]):
             continue  # vandalismo óbvio não é questão de cânon, poupa cota
+        if REVERT_RE.match(str(ev.get("comment", ""))):
+            continue  # desfazer/reverter não traz alegação nova, poupa cota
         if done >= MAX_EVENTS_PER_RUN:
             break
         try:
