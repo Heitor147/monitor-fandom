@@ -56,6 +56,31 @@ sem chave, atingir o limite da API ou falhar, o monitor continua funcionando:
 o evento é enviado sem o julgamento, e o plano B tenta gerar apenas um resumo
 quando possível.
 
+## Hermes: o agente operacional
+
+**Hermes é o agente responsável pela operação do sistema**: ele é a camada que
+faz a mensagem chegar ao usuário e registra que o ciclo foi concluído. Na
+versão atual, ainda rudimentar, Hermes é representado pelo bot/workflow que:
+
+- envia os avisos por email e WhatsApp depois que o monitor termina a análise;
+- verifica se algum canal entregou a notificação;
+- salva o estado atualizado e faz o commit no repositório para que o próximo
+  ciclo saiba o que já foi processado.
+
+Na versão atual, Hermes ainda não consegue enviar uma mensagem direta para o
+WhatsApp por conta própria. Para realizar essa entrega, ele usa o **CallMeBot**
+como meio intermediário: Hermes prepara o aviso, envia a solicitação ao
+CallMeBot e o serviço encaminha a mensagem para o WhatsApp configurado.
+
+Hermes não é o juiz do conteúdo. Essa função pertence ao Ra. Hermes também não
+decide se uma edição deve ser aceita ou revertida: ele apenas transporta o
+resultado e persiste o estado operacional do monitor.
+
+O conceito de Hermes ainda está em desenvolvimento e pode mudar bastante até
+a versão final. A separação atual entre Ra (interpretação e julgamento) e
+Hermes (entrega e persistência) é uma primeira organização dos papéis, não uma
+API ou arquitetura definitiva.
+
 ## Como funciona
 
 - O workflow [`monitor.yml`](./.github/workflows/monitor.yml) roda a cada
@@ -71,13 +96,17 @@ quando possível.
   interrompe as demais.
 - O Ra faz no máximo 8 julgamentos por execução, com intervalo para respeitar
   o plano gratuito do Gemini.
+- O Hermes envia as notificações e, quando pelo menos uma é entregue, permite
+  que o workflow salve o estado atualizado por meio de um commit.
 - O estado só é salvo quando pelo menos um canal de notificação entrega o
   resultado. Se nenhum canal estiver configurado ou todos falharem, o estado
   não avança e o evento será tentado novamente no próximo ciclo.
 
 O email recebe o relatório completo do Ra. O WhatsApp recebe uma versão
 compacta de até 600 caracteres por evento, preservando os links de aceitar e
-reverter.
+reverter. Atualmente, essa mensagem chega ao WhatsApp através do CallMeBot,
+porque o Hermes ainda não possui envio direto. Essa é uma limitação da versão
+atual e pode mudar conforme o Hermes evoluir.
 
 ## Configuração
 
@@ -135,6 +164,9 @@ Nesse formato, as mesmas páginas são usadas em todas as wikis. O estado antigo
 também é migrado para a estrutura separada por wiki quando possível.
 
 ### 3. Configurar WhatsApp com CallMeBot
+
+Como o Hermes ainda não consegue enviar mensagens diretamente, o CallMeBot é
+atualmente o intermediário usado para entregar os alertas no WhatsApp:
 
 1. Salve **+34 644 95 42 75** nos contatos.
 2. Envie `I allow callmebot to call me` para esse número no WhatsApp.

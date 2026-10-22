@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fandom Watcher
+Fandom Watcher (Hermes)
 Monitora edições em páginas específicas e atividade no Message Wall de um
 perfil da Fandom, e manda notificação por email + WhatsApp (CallMeBot)
 quando algo novo acontece.
@@ -275,7 +275,7 @@ def send_email(subject, body):
             headers={"Authorization": f"Bearer {api_key}"},
             json={
                 # onboarding@resend.dev funciona sem precisar verificar domínio próprio
-                "from": "Ra <onboarding@resend.dev>",
+                "from": "Hermes <onboarding@resend.dev>",
                 "to": [to_addr],
                 "subject": subject,
                 "text": body,
@@ -369,7 +369,7 @@ def main():
 
     results = []
     body = "\n\n".join(format_event(ev) for ev in events)
-    results.append(send_email(f"Fandom Watcher: {len(events)} novidade(s)", body))
+    results.append(send_email(f"Hermes: {len(events)} novidade(s)", body))
 
     # WhatsApp: um resumo curto por evento (CallMeBot tem limite de tamanho)
     for ev in events:
