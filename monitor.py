@@ -14,6 +14,7 @@ from urllib.parse import quote
 
 import requests
 import ai_summary
+import ra
 
 HEADERS = {"User-Agent": "fandom-watcher/1.0 (monitor pessoal de wiki)"}
 
@@ -216,17 +217,25 @@ def check_wall(wiki, username, wall_owner_id, state, events, ignored_users):
 
 # ---------- formatação das notificações ----------
 
-def format_event(ev):
+def format_event(ev, full=True):
+    """full=True: email (relatório completo do Ra). full=False: WhatsApp (600 caracteres)."""
     if ev["type"] == "edit":
-        return (
+        canon = ra.long(ev) if full else ra.short(ev)
+        head = (
             f"✏️ [{ev['wiki']}] Edição em \"{ev['page']}\"\n"
             f"Por: {ev['user']}\n"
             f"Resumo: {ev['comment']}\n"
             f"Quando: {ev['timestamp']}\n"
             + (f"IA: {ev['ai']}\n" if ev.get("ai") else "")
-            + f"Aceitar (ver página): {ev['accept_link']}\n"
+            + (f"{canon}\n" if canon else "")
+        )
+        links = (
+            f"Aceitar (ver página): {ev['accept_link']}\n"
             f"Reverter (abre editor): {ev['revert_link']}"
         )
+        if not full:  # no WhatsApp corta o cabeçalho, nunca os links de aceitar/reverter
+            head = head[: max(0, 600 - len(links) - 1)].rstrip("\n") + "\n"
+        return head + links
     if ev["type"] == "wall_new":
         return (
             f"💬 [{ev['wiki']}] Novo post no mural: \"{ev['title']}\"\n"
@@ -353,6 +362,10 @@ def main():
 
     print(f"{len(events)} evento(s) novo(s).")
     ai_summary.enrich(events)
+    try:
+        ra.enrich(events, wikis)
+    except Exception as e:  # o Ra nunca derruba o bot
+        print(f"::warning::Ra falhou: {type(e).__name__}: {e}")
 
     results = []
     body = "\n\n".join(format_event(ev) for ev in events)
@@ -360,7 +373,7 @@ def main():
 
     # WhatsApp: um resumo curto por evento (CallMeBot tem limite de tamanho)
     for ev in events:
-        results.append(send_whatsapp(format_event(ev)[:600]))
+        results.append(send_whatsapp(format_event(ev, full=False)[:600]))
 
     if any(r is True for r in results):
         save_json(STATE_PATH, state)

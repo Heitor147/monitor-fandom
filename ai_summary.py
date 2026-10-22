@@ -144,6 +144,7 @@ def enrich(events):
             diff_text = fetch_diff(ev["wiki"], parent_id, rev_id)
             if not diff_text:
                 continue
+            ev["diff_text"] = diff_text  # reaproveitado pelo Ra
             if done:
                 time.sleep(SECONDS_BETWEEN_CALLS)
             done += 1
