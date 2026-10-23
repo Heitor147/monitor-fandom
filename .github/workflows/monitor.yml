@@ -37,7 +37,7 @@ jobs:
           git add state.json
           if ! git diff --staged --quiet; then
             timestamp=$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')
-            git commit -m "Atualização Concluída - $timestamp"
+            git commit -m "Atualização do Estado Atual das Páginas - $timestamp"
           fi
           git pull --rebase --autostash
           git push
