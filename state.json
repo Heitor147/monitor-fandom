@@ -1308,6 +1308,20 @@
         }
       },
       "wall_threads": {}
+    },
+    "community": {
+      "pages": {
+        "2410636": {
+          "last_revid": 4131633,
+          "title": "Adoption:Hazbin Hotel Fanon Wiki (7)"
+        }
+      },
+      "wall_threads": {
+        "4400000000003538931": {
+          "post_count": 0,
+          "upvote_count": 0
+        }
+      }
     }
   }
 }
